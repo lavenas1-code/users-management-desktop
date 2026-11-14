@@ -1,23 +1,35 @@
 package com.jcaa.usersmanagement.infrastructure.config;
 
+import com.jcaa.usersmanagement.application.port.in.CreateEmployeeUseCase;
 import com.jcaa.usersmanagement.application.port.in.CreateUserUseCase;
+import com.jcaa.usersmanagement.application.port.in.DeleteEmployeeUseCase;
 import com.jcaa.usersmanagement.application.port.in.DeleteUserUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetAllEmployeesUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetAllUsersUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetEmployeeByIdUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetUserByIdUseCase;
 import com.jcaa.usersmanagement.application.port.in.LoginUseCase;
+import com.jcaa.usersmanagement.application.port.in.UpdateEmployeeUseCase;
 import com.jcaa.usersmanagement.application.port.in.UpdateUserUseCase;
+import com.jcaa.usersmanagement.application.service.CreateEmployeeService;
 import com.jcaa.usersmanagement.application.service.CreateUserService;
+import com.jcaa.usersmanagement.application.service.DeleteEmployeeService;
 import com.jcaa.usersmanagement.application.service.DeleteUserService;
 import com.jcaa.usersmanagement.application.service.EmailNotificationService;
+import com.jcaa.usersmanagement.application.service.GetAllEmployeesService;
 import com.jcaa.usersmanagement.application.service.GetAllUsersService;
+import com.jcaa.usersmanagement.application.service.GetEmployeeByIdService;
 import com.jcaa.usersmanagement.application.service.GetUserByIdService;
 import com.jcaa.usersmanagement.application.service.LoginService;
+import com.jcaa.usersmanagement.application.service.UpdateEmployeeService;
 import com.jcaa.usersmanagement.application.service.UpdateUserService;
 import com.jcaa.usersmanagement.infrastructure.adapter.email.JavaMailEmailSenderAdapter;
 import com.jcaa.usersmanagement.infrastructure.adapter.email.SmtpConfig;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.config.DatabaseConfig;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.config.DatabaseConnectionFactory;
+import com.jcaa.usersmanagement.infrastructure.adapter.persistence.repository.EmployeeRepositoryMySQL;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.repository.UserRepositoryMySQL;
+import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.controller.EmployeeController;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.controller.UserController;
 
 import java.sql.Connection;
@@ -39,12 +51,14 @@ public final class DependencyContainer {
   private static final String SMTP_FROM_NAME = "smtp.from.name";
 
   private final UserController userController;
+  private final EmployeeController employeeController;
 
   public DependencyContainer() {
     final AppProperties properties = new AppProperties();
 
     final Connection connection = buildDatabaseConnection(properties);
     final UserRepositoryMySQL userRepository = new UserRepositoryMySQL(connection);
+    final EmployeeRepositoryMySQL employeeRepository = new EmployeeRepositoryMySQL(connection);
 
     final JavaMailEmailSenderAdapter emailSender =
         new JavaMailEmailSenderAdapter(buildSmtpConfig(properties));
@@ -71,10 +85,33 @@ public final class DependencyContainer {
             getUserByIdUseCase,
             getAllUsersUseCase,
             loginUseCase);
+
+    final CreateEmployeeUseCase createEmployeeUseCase =
+        new CreateEmployeeService(employeeRepository, employeeRepository, validator);
+    final UpdateEmployeeUseCase updateEmployeeUseCase =
+        new UpdateEmployeeService(employeeRepository, employeeRepository, validator);
+    final DeleteEmployeeUseCase deleteEmployeeUseCase =
+        new DeleteEmployeeService(employeeRepository, employeeRepository, validator);
+    final GetEmployeeByIdUseCase getEmployeeByIdUseCase =
+        new GetEmployeeByIdService(employeeRepository, validator);
+    final GetAllEmployeesUseCase getAllEmployeesUseCase =
+        new GetAllEmployeesService(employeeRepository);
+
+    this.employeeController =
+        new EmployeeController(
+            createEmployeeUseCase,
+            updateEmployeeUseCase,
+            deleteEmployeeUseCase,
+            getEmployeeByIdUseCase,
+            getAllEmployeesUseCase);
   }
 
   public UserController userController() {
     return userController;
+  }
+
+  public EmployeeController employeeController() {
+    return employeeController;
   }
 
   private static Connection buildDatabaseConnection(final AppProperties properties) {
